@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize, de::Error};
-
 use vrchatapi::{apis::configuration, models};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

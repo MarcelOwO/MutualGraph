@@ -1,11 +1,16 @@
 use std::io::{self, Write};
-pub use vrchatapi::apis;
+use std::{thread::sleep, time::Duration};
+
 use vrchatapi::{
+    apis,
     apis::configuration,
-    models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode},
+    models::{EitherUserOrTwoFactor, LimitedUserFriend, TwoFactorAuthCode, TwoFactorEmailCode},
 };
 
-pub async fn init(application: String) -> configuration::Configuration {
+use crate::api::custom::get_mutuals;
+use crate::utility::read_user_input;
+
+pub async fn authenticate(application: String) -> configuration::Configuration {
     let email = read_user_input("enter email");
     let username = read_user_input("enter username");
     let password = read_user_input("enter password");
@@ -67,14 +72,51 @@ pub async fn init(application: String) -> configuration::Configuration {
     config
 }
 
-fn read_user_input(prompt: &str) -> String {
-    print!("{}", prompt);
-    io::stdout().flush().expect("Failed to flush stdout");
+pub(crate) async fn init() {
+    let config = authenticate(String::from("MutualGraph")).await;
 
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
+    let total_friends = 300;
 
-    input.trim().to_string()
+    let mut offset = 0;
+    let n = 100;
+
+    let mut friends: Vec<LimitedUserFriend> = vec![];
+
+    while offset <= total_friends {
+        match vrchatapi::apis::friends_api::get_friends(&config, Some(offset), Some(n), Some(true))
+            .await
+        {
+            Ok(result) => {
+                for friend in result {
+                    friends.push(friend);
+                }
+            }
+            Err(e) => {
+                println!("Failed to get Friends: {}", e);
+            }
+        };
+
+        offset += friends.len() as i32;
+        //Delay because of vrchat api rules
+        sleep(Duration::from_secs(60));
+    }
+
+    let mut mutuals: Vec<LimitedUserFriend> = vec![];
+
+    for friend in friends {
+        let player_uuid = friend.id;
+        match get_mutuals(&config, player_uuid).await {
+            Ok(result) => {
+                for mutual in result {
+                    mutuals.push(mutual);
+                }
+            }
+            Err(e) => {
+                println!("Error getting mutual: {}", e);
+            }
+        };
+
+        //Delay because of vrchat api rules
+        sleep(Duration::from_secs(60));
+    }
 }
