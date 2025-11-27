@@ -1,17 +1,16 @@
 use std::io::{self, Write};
 pub use vrchatapi::apis;
 use vrchatapi::{
-    apis::{configuration, friends_api, users_api},
+    apis::configuration,
     models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode},
 };
 
-pub async fn Init(application: String) -> configuration::Configuration {
+pub async fn init(application: String) -> configuration::Configuration {
     let email = read_user_input("enter email");
     let username = read_user_input("enter username");
     let password = read_user_input("enter password");
 
     let mut config = apis::configuration::Configuration::default();
-
     config.basic_auth = Some((username, Some(password)));
 
     let user_string = format!("{0} {1}", application, email);

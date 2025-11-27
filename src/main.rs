@@ -1,13 +1,13 @@
 use std::{thread::sleep, time::Duration};
 
+use api::init;
 use vrchatapi::models::LimitedUserFriend;
-
 mod api;
 mod mutual;
 
 #[tokio::main]
 async fn main() {
-    let config = api::Init(String::from("MutualGraph")).await;
+    let config = init(String::from("MutualGraph")).await;
 
     let total_friends = 300;
 

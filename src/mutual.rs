@@ -1,6 +1,5 @@
-use std::io::Error;
+use serde::{Deserialize, Serialize, de::Error};
 
-use serde::{Deserialize, Serialize};
 use vrchatapi::{apis::configuration, models};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,16 +11,16 @@ pub enum GetMutualsError {
 pub async fn get_mutuals(
     configuration: &configuration::Configuration,
     user_id: String,
-) -> Result<Vec<models::LimitedUserFriend>, Error<GetMutualsError>> {
+) -> Result<Vec<models::LimitedUserFriend>, vrchatapi::apis::Error<GetMutualsError>> {
     let local_config = configuration;
-    let client = local_config.client;
+    let local_var_client = &local_config.client;
 
     let uri = format!(
         "{}/users/{}/mutuals/friends",
         local_config.base_path, user_id,
     );
 
-    let mut local_var_req_builder = client.request(reqwest::Method::GET, uri.as_str());
+    let mut local_var_req_builder = local_var_client.request(reqwest::Method::GET, uri.as_str());
 
     if let Some(ref local_user_agent) = local_config.user_agent {
         local_var_req_builder =
@@ -35,26 +34,15 @@ pub async fn get_mutuals(
     let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-        serde_json::from_str(&local_var_content).map_err(Error::from)
+        serde_json::from_str(&local_var_content).map_err(vrchatapi::apis::Error::from)
     } else {
-        let local_var_entity: Option<GetFriendsError> =
+        let local_var_entity: Option<GetMutualsError> =
             serde_json::from_str(&local_var_content).ok();
-        let local_var_error = ResponseContent {
+        let local_var_error = vrchatapi::apis::ResponseContent {
             status: local_var_status,
             content: local_var_content,
             entity: local_var_entity,
         };
-        Err(Error::ResponseError(local_var_error))
+        Err(vrchatapi::apis::Error::ResponseError(local_var_error))
     }
-
-    let local_req = match local_req_builder.build() {
-        Ok(result) => {}
-        Err(e) => {
-            println!("Error in building request: {}", e);
-        }
-    };
-
-    let mutual = vec!["a", "b"];
-
-    Ok(mutual)
 }
