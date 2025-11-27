@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+use std::sync::mpsc::Sender;
 use std::{thread::sleep, time::Duration};
 
 use vrchatapi::{
@@ -8,6 +9,7 @@ use vrchatapi::{
 };
 
 use crate::api::custom::get_mutuals;
+use crate::db::models::Friend;
 use crate::utility::read_user_input;
 
 pub async fn authenticate(application: String) -> configuration::Configuration {
@@ -72,7 +74,7 @@ pub async fn authenticate(application: String) -> configuration::Configuration {
     config
 }
 
-pub(crate) async fn init() {
+pub(crate) async fn init(tx: Sender<Friend>) {
     let config = authenticate(String::from("MutualGraph")).await;
 
     let total_friends = 300;
@@ -101,10 +103,11 @@ pub(crate) async fn init() {
         sleep(Duration::from_secs(60));
     }
 
-    let mut mutuals: Vec<LimitedUserFriend> = vec![];
-
     for friend in friends {
+        let mut mutuals: Vec<LimitedUserFriend> = vec![];
+        let mut newFriend = Friend::default();
         let player_uuid = friend.id;
+        newFriend.uuid = player_uuid.clone();
         match get_mutuals(&config, player_uuid).await {
             Ok(result) => {
                 for mutual in result {
@@ -116,6 +119,17 @@ pub(crate) async fn init() {
             }
         };
 
+        let uuid_list: Vec<String> = mutuals.iter().map(|x| x.id.clone()).collect();
+        newFriend.friends.extend(uuid_list);
+
+        match tx.send(newFriend) {
+            Ok(result) => {
+                // nothing
+            }
+            Err(e) => {
+                println!("{}", e)
+            }
+        }
         //Delay because of vrchat api rules
         sleep(Duration::from_secs(60));
     }
